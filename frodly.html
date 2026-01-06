@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frodly API Processor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .sticky-top { top: 0; z-index: 1020; }
+        #resultsContainer { background: #fff; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-4">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h2 class="mb-0"><i class="fas fa-mobile-alt"></i> Frodly API Phone Processor</h2>
+                <small>Process phone numbers one by one with 10-second delays</small>
+            </div>
+            
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-white border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <h3 class="text-primary" id="totalNumbers">0</h3>
+                                <p class="text-muted mb-0">Total Numbers</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-white border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <h3 class="text-info" id="processedNumbers">0</h3>
+                                <p class="text-muted mb-0">Processed</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-white border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <h3 class="text-success" id="successCount">0</h3>
+                                <p class="text-muted mb-0">Successful</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-white border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <h3 class="text-danger" id="errorCount">0</h3>
+                                <p class="text-muted mb-0">Failed</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="d-flex flex-wrap gap-2 justify-content-center">
+                            <button id="startBtn" class="btn btn-lg btn-success px-4">
+                                <i class="fas fa-play"></i> Start Processing
+                            </button>
+                            <button id="pauseBtn" class="btn btn-lg btn-warning px-4" disabled>
+                                <i class="fas fa-pause"></i> Pause
+                            </button>
+                            <button id="stopBtn" class="btn btn-lg btn-danger px-4" disabled>
+                                <i class="fas fa-stop"></i> Stop
+                            </button>
+                            <button id="resetBtn" class="btn btn-lg btn-secondary px-4">
+                                <i class="fas fa-redo"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-tasks"></i> Progress</h5>
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span id="currentStatus">Ready to start</span>
+                                <span id="progressPercent" class="fw-bold">0%</span>
+                            </div>
+                            <div class="progress mt-2" style="height: 20px;">
+                                <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div id="nextRequestInfo" class="text-center mt-2"></div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info" id="currentProcessing" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span id="processingText">Currently processing...</span>
+                </div>
+
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-list"></i> Results Log</h5>
+                            <span class="badge bg-secondary" id="resultsCount">0 results</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="resultsContainer" style="max-height: 450px; overflow-y: auto;">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th width="150">Phone Number</th>
+                                        <th width="120">Status</th>
+                                        <th>API Response / Message</th>
+                                        <th width="120">Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="resultsTable">
+                                    <tr id="noResults">
+                                        <td colspan="4" class="text-center text-muted py-5">
+                                            No results yet. Click "Start Processing" to begin.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer text-center text-muted bg-white border-top-0">
+                <small>
+                    <i class="fas fa-link"></i> Endpoint: <code>http://beta.frodlybd.com/public/frodly-test</code>
+                    <span class="mx-2">|</span> 
+                    <i class="fas fa-clock"></i> Interval: 10s
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // Configuration
+            const API_URL = 'http://beta.frodlybd.com/public/api/frodly-test';
+            const phoneNumbers = [
+                "01738606158", "01726319619", "01879200750", "01641389658", "01812337616",
+                "01946377865", "01711506053", "01917984002", "01796355555", "01772366352",
+                "01537657779", "01909302126", "01879407777", "01859001413", "01304040910",
+                "01919858585", "01919220992", "01836257538", "01957269480", "01883270119",
+                "01798168537", "01311145385", "01979247649", "01718117901", "01776296648",
+                "01324523404", "01852210052", "01701014050", "01788332338", "01316469005"
+            ];
+
+            const state = {
+                currentIndex: 0,
+                processed: 0,
+                success: 0,
+                errors: 0,
+                isProcessing: false,
+                isPaused: false,
+                timer: null,
+                results: []
+            };
+
+            function initUI() {
+                $('#totalNumbers').text(phoneNumbers.length);
+                updateStats();
+                updateProgress();
+            }
+
+            function updateStats() {
+                $('#processedNumbers').text(state.processed);
+                $('#successCount').text(state.success);
+                $('#errorCount').text(state.errors);
+                $('#resultsCount').text(`${state.results.length} results`);
+            }
+
+            function updateProgress() {
+                const percent = phoneNumbers.length > 0 ? 
+                    Math.round((state.processed / phoneNumbers.length) * 100) : 0;
+                
+                $('#progressBar').css('width', percent + '%');
+                $('#progressPercent').text(percent + '%');
+                
+                if (state.isProcessing && !state.isPaused) {
+                    $('#currentStatus').html(
+                        `Processing: <strong>${state.currentIndex + 1}</strong> / ${phoneNumbers.length}`
+                    );
+                } else if (state.isPaused) {
+                    $('#currentStatus').text(`Paused at ${state.currentIndex + 1}`);
+                } else if (state.processed >= phoneNumbers.length && phoneNumbers.length > 0) {
+                    $('#currentStatus').html('<strong class="text-success">✓ Complete</strong>');
+                } else {
+                    $('#currentStatus').text('Ready');
+                }
+            }
+
+            function addResultToTable(number, status, message) {
+                if ($('#noResults').length) $('#noResults').remove();
+
+                const badges = {
+                    processing: 'info',
+                    success: 'success',
+                    error: 'danger'
+                };
+                
+                const icons = {
+                    processing: 'fa-spinner fa-spin',
+                    success: 'fa-check',
+                    error: 'fa-times'
+                };
+
+                const time = new Date().toLocaleTimeString([], { hour12: false });
+                
+                const row = `
+                    <tr class="${status === 'processing' ? 'table-light' : ''}">
+                        <td><strong>${number}</strong></td>
+                        <td><span class="badge bg-${badges[status]}"><i class="fas ${icons[status]}"></i> ${status}</span></td>
+                        <td><small class="text-break">${message}</small></td>
+                        <td><small class="text-muted">${time}</small></td>
+                    </tr>`;
+
+                $('#resultsTable').prepend(row);
+                state.results.unshift({ number, status, message, time });
+            }
+
+            function processNumber(index) {
+                if (!state.isProcessing || state.isPaused) return;
+                if (index >= phoneNumbers.length) {
+                    completeProcessing();
+                    return;
+                }
+
+                const number = phoneNumbers[index];
+                $('#processingText').text(`Calling API for: ${number}`);
+                $('#currentProcessing').show();
+                addResultToTable(number, 'processing', 'Initiating request...');
+
+                $.ajax({
+                    url: API_URL,
+                    method: 'GET',
+                    data: { number: number },
+                    dataType: 'json',
+                    crossDomain: true,
+                    timeout: 10000,
+                    success: function(response) {
+                        state.processed++;
+                        // Removing the temp "processing" row and replacing with real result
+                        $('#resultsTable tr:first').remove(); 
+                        
+                        if (response.status === true || response.success === true) {
+                            state.success++;
+                            addResultToTable(number, 'success', JSON.stringify(response.data || 'Success'));
+                        } else {
+                            state.errors++;
+                            addResultToTable(number, 'error', response.message || 'API Error');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        state.processed++;
+                        state.errors++;
+                        $('#resultsTable tr:first').remove();
+                        
+                        let msg = "Network/CORS Error";
+                        if (location.protocol === 'https:' && API_URL.startsWith('http:')) {
+                            msg = "Blocked: Mixed Content (HTTPS cannot call HTTP)";
+                        } else if (status === 'timeout') {
+                            msg = "Request Timeout";
+                        }
+                        
+                        addResultToTable(number, 'error', msg);
+                    },
+                    complete: function() {
+                        $('#currentProcessing').hide();
+                        updateStats();
+                        updateProgress();
+                        state.currentIndex++;
+
+                        if (state.currentIndex < phoneNumbers.length && state.isProcessing && !state.isPaused) {
+                            startCountdown(10);
+                        } else if (state.currentIndex >= phoneNumbers.length) {
+                            completeProcessing();
+                        }
+                    }
+                });
+            }
+
+            function startCountdown(seconds) {
+                let timeLeft = seconds;
+                if (state.timer) clearInterval(state.timer);
+
+                state.timer = setInterval(() => {
+                    if (timeLeft > 0) {
+                        $('#nextRequestInfo').html(
+                            `<div class="badge bg-warning text-dark p-2">Next request in ${timeLeft}s</div>`
+                        );
+                        timeLeft--;
+                    } else {
+                        clearInterval(state.timer);
+                        $('#nextRequestInfo').empty();
+                        processNumber(state.currentIndex);
+                    }
+                }, 1000);
+            }
+
+            function startProcessing() {
+                state.isProcessing = true;
+                state.isPaused = false;
+                $('#startBtn').prop('disabled', true);
+                $('#pauseBtn').prop('disabled', false).html('<i class="fas fa-pause"></i> Pause');
+                $('#stopBtn').prop('disabled', false);
+                processNumber(state.currentIndex);
+            }
+
+            function togglePause() {
+                state.isPaused = !state.isPaused;
+                if (state.isPaused) {
+                    clearInterval(state.timer);
+                    $('#pauseBtn').html('<i class="fas fa-play"></i> Resume').removeClass('btn-warning').addClass('btn-success');
+                } else {
+                    $('#pauseBtn').html('<i class="fas fa-pause"></i> Pause').removeClass('btn-success').addClass('btn-warning');
+                    startCountdown(2);
+                }
+            }
+
+            function stopProcessing() {
+                state.isProcessing = false;
+                clearInterval(state.timer);
+                $('#startBtn').prop('disabled', false);
+                $('#pauseBtn').prop('disabled', true);
+                $('#stopBtn').prop('disabled', true);
+                $('#currentProcessing').hide();
+                $('#nextRequestInfo').empty();
+            }
+
+            function completeProcessing() {
+                stopProcessing();
+                $('#nextRequestInfo').html('<div class="alert alert-success">All numbers finished!</div>');
+            }
+
+            function resetProcessing() {
+                stopProcessing();
+                state.currentIndex = 0;
+                state.processed = 0;
+                state.success = 0;
+                state.errors = 0;
+                state.results = [];
+                $('#resultsTable').html('<tr id="noResults"><td colspan="4" class="text-center text-muted py-5">No results yet.</td></tr>');
+                initUI();
+            }
+
+            $('#startBtn').click(startProcessing);
+            $('#pauseBtn').click(togglePause);
+            $('#stopBtn').click(stopProcessing);
+            $('#resetBtn').click(resetProcessing);
+
+            initUI();
+        });
+    </script>
+</body>
+</html>
